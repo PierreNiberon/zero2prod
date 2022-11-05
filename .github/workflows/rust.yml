@@ -22,7 +22,7 @@ jobs:
       - name: Security
         run: cargo audit
       - name: Code coverage
-        run: cargo tarpaulin --ignore-tests --verbose
+        run: cargo tarpaulin --ignore-tests
       - name: Build
         run: cargo build --verbose
       - name: Run tests
