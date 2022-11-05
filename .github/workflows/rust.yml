@@ -21,8 +21,10 @@ jobs:
         run: cargo fmt -- --check
       - name: Security
         run: cargo audit
-      - name: Code coverage
-        run: cargo tarpaulin --ignore-tests
+      - name: cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: "--ignore-tests --avoid-cfg-tarpaulin"
       - name: Build
         run: cargo build --verbose
       - name: Run tests
