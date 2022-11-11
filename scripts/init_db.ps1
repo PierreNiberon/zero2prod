@@ -1,3 +1,5 @@
+
+
 # set env variable
 $Env:DB_PASSWORD = if ($Env:DB_PASSWORD) {$Env:DB_PASSWORD} else {"password"};
 $Env:DB_NAME = if ($Env:DB_NAME) {$Env:DB_NAME} else {"newsletter"};
