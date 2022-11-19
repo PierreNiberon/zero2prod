@@ -6,6 +6,8 @@ fi
 if ! [ -x "$(command -v sqlx)" ]; then
 echo >&2 "Error: sqlx is not installed."
 echo >&2 "Use:"
+# careful of the line below. should be  cargo install sqlx-cli --no-default-features --features rustls,postgres
+#as per documentation
 echo >&2 " cargo install --version='~0.6' sqlx-cli \
 --no-default-features --features rustls,postgres"
 echo >&2 "to install it."
@@ -23,6 +25,8 @@ DB_NAME="${POSTGRES_DB:=newsletter}"
 # Check if a custom port has been set, otherwise default to '5432'
 DB_PORT="${POSTGRES_PORT:=5432}"
 # Launch postgres using Docker
+if [[ -z "${SKIP_DOCKER}" ]]
+then
 sudo docker run \
 -e POSTGRES_USER=${DB_USER} \
 -e POSTGRES_PASSWORD=${DB_PASSWORD} \
@@ -31,6 +35,7 @@ sudo docker run \
 -d postgres \
 postgres -N 1000
 # ^ Increased maximum number of connections for testing purposes
+fi
 
 # Keep pinging Postgres until it's ready to accept commands
 export PGPASSWORD="${DB_PASSWORD}"
@@ -38,8 +43,10 @@ until psql -h "localhost" -U "${DB_USER}" -p "${DB_PORT}" -d "postgres" -c '\q';
 >&2 echo "Postgres is still unavailable - sleeping"
 sleep 1
 done
->&2 echo "Postgres is up and running on port ${DB_PORT}!"
+>&2 echo "Postgres is up and running on port ${DB_PORT} - running migrations now!"
 DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}
 export DATABASE_URL
 sqlx database create
+sqlx migrate run
+>&2 echo "Postgres has been migrated, ready to go!"
 
