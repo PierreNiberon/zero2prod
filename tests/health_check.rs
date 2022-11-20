@@ -1,5 +1,5 @@
 use std::net::TcpListener;
-
+use zero2prod::startup::run;
 // Launch our application in the background ~somehow~
 // No .await call, therefore no need for `spawn_app` to be async now.
 // We are also running tests, so it is not worth it to propagate errors:
@@ -9,7 +9,7 @@ fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     // We retrieve the port assigned to us by the OS
     let port = listener.local_addr().unwrap().port();
-    let server = zero2prod::run(listener).expect("Failed to bind address");
+    let server = run(listener).expect("Failed to bind address");
     let _ = tokio::spawn(server);
     // We return the application address to the caller!
     format!("http://127.0.0.1:{}", port)
