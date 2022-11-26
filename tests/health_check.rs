@@ -1,6 +1,7 @@
-use sqlx::PgPool;
+use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
-use zero2prod::configuration::get_configuration;
+use uuid::Uuid;
+use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::startup::run;
 
 pub struct TestApp {
@@ -8,21 +9,16 @@ pub struct TestApp {
     pub db_pool: PgPool,
 }
 
-// Launch our application in the background ~somehow~
-// No .await call, therefore no need for `spawn_app` to be async now.
-// We are also running tests, so it is not worth it to propagate errors:
-// if we fail to perform the required setup we can just panic and crash
-// all the things.
-
 async fn spawn_app() -> TestApp {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     // We retrieve the port assigned to us by the OS
     let port = listener.local_addr().unwrap().port();
     // Connect to a DB
-    let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection = PgPool::connect(&configuration.database.connection_string())
-        .await
-        .expect("Failure to connect to DB");
+    let mut configuration = get_configuration().expect("Failed to read configuration.");
+    // randomize the name of the db to isolate our tests
+    configuration.database.database_name = Uuid::new_v4().to_string();
+
+    let connection = configure_database(&configuration.database).await;
     let server = run(listener, connection.clone()).expect("Failed to bind address");
     let _ = tokio::spawn(server);
     // We return the application address to the caller!
@@ -30,6 +26,26 @@ async fn spawn_app() -> TestApp {
         address: format!("http://127.0.0.1:{}", port),
         db_pool: connection,
     }
+}
+
+pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
+    // Create database
+    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+        .await
+        .expect("Failed to connect to Postgres");
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
+        .await
+        .expect("Failed to create database.");
+    // Migrate database
+    let connection_pool = PgPool::connect(&config.connection_string())
+        .await
+        .expect("Failed to connect to Postgres.");
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
+        .await
+        .expect("Failed to migrate the database");
+    connection_pool
 }
 
 // tests/health_check.rs
