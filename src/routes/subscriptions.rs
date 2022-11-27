@@ -3,6 +3,9 @@ use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+// FormData is a struct that will be populated by the web::Form<FormData> extractor
+// web::Form here will take the http request in the path and extract the data from it
+// serde will do the deserialisation for us
 #[allow(dead_code)]
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -11,11 +14,9 @@ pub struct FormData {
 }
 
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
-    // `Result` has two variants: `Ok` and `Err`.
-    // The first for successes, the second for failures.
-    // We use a `match` statement to choose what to do based
-    // on the outcome.
-    // We will talk more about `Result` going forward!
+    //we use the query! macro to write our dynamic insert query
+    // we execute it against the connection pool
+    // we match it directly to send either Ok or Err variant
     match sqlx::query!(
         r#"
 INSERT INTO subscriptions (id, email, name, subscribed_at)

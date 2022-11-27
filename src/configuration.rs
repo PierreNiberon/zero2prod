@@ -1,3 +1,4 @@
+// The config is split in two struct for isolation purpose between db and app settings
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
@@ -12,6 +13,9 @@ pub struct DatabaseSettings {
     pub database_name: String,
 }
 
+// the get_configuration function retrieve the information from the configuration.yaml file
+// it uses the config::Builder from the config crate.
+// the deserialisation is done via serde.
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     // Initialise our configuration reader
     let settings = config::Config::builder()
@@ -26,6 +30,10 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     settings.try_deserialize::<Settings>()
 }
 
+// DatabaseSettings has two methods that build a connection string from the configuration informations
+// connection_string() builds with a database name
+// connection_string_without_db builds it without a db name so that it can be randomized for
+// tests isolation purposes.
 impl DatabaseSettings {
     pub fn connection_string(&self) -> String {
         format!(

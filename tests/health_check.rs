@@ -4,6 +4,10 @@ use uuid::Uuid;
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::startup::run;
 
+// here the point of the test is to spawn an app from our run() function and see how it behaves
+// The app spawn from a random available port on localhost and is then tested
+// then we create a dummy db for test purpose and do a migration on it to make it operational
+// once the app is ready it serve the TestApp struct to the test case with an address and a connection pool
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
