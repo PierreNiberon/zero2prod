@@ -21,7 +21,7 @@ async fn main() -> std::io::Result<()> {
     // sqlx would not allow possible async concurential approach at compile time with PgConnect since you need the connection
     // to be &mut
     let connection_pool =
-        PgPool::connect(&configuration.database.connection_string().expose_secret())
+        PgPool::connect(configuration.database.connection_string().expose_secret())
             .await
             .expect("Failure to connect to DB");
     // here we build the address that our app will serve
