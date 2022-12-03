@@ -16,55 +16,46 @@ pub struct FormData {
     name: String,
 }
 
-pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
-    // we tracing here because there is an IO operation. We tracing the information to have more insigths
-    // we build a request ID to follow the tracings more easily in case of concurent access.
-    let request_id = Uuid::new_v4();
-    let request_span = tracing::info_span!(
-            "Adding a new subscriber.",
-            %request_id,
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(form, pool),
+    fields(
+    request_id = %Uuid::new_v4(),
     subscriber_email = %form.email,
     subscriber_name = %form.name
-    );
-    let _request_span_guard = request_span.enter();
+    )
+    )]
+pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
+    match insert_subscriber(&pool, &form).await {
+        Ok(_) => HttpResponse::Ok().finish(),
 
-    // We do not call `.enter` on query_span!
-    // `.instrument` takes care of it at the right moments
-    // in the query future lifetime
-    let query_span = tracing::info_span!("Saving new subscriber details in the database");
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
 
-    //we use the query! macro to write our dynamic insert query
-    // we execute it against the connection pool
-    // we match it directly to send either Ok or Err variant
-    match sqlx::query!(
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(form, pool)
+)]
+pub async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
-INSERT INTO subscriptions (id, email, name, subscribed_at)
-VALUES ($1, $2, $3, $4)
-"#,
+    INSERT INTO subscriptions (id, email, name, subscribed_at)
+    VALUES ($1, $2, $3, $4)
+    "#,
         Uuid::new_v4(),
         form.email,
         form.name,
         Utc::now()
     )
-    .execute(pool.get_ref())
-    .instrument(query_span)
+    .execute(pool)
     .await
-    {
-        // we tracing here in case of sucess or error
-        Ok(_) => {
-            tracing::info!(
-                "Request ID : '{}' - New subscriber registered in database.",
-                request_id
-            );
-            HttpResponse::Ok().finish()
-        }
-        Err(e) => {
-            tracing::error!(
-                "Request ID : '{}' - Failed to execute query: {:?}",
-                request_id,
-                e
-            );
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+        // Using the `?` operator to return early
+        // if the function failed, returning a sqlx::Error
+        // We will talk about error handling in depth later!
+    })?;
+    Ok(())
 }

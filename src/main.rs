@@ -1,3 +1,4 @@
+use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use std::net::TcpListener;
 use zero2prod::configuration::get_configuration;
@@ -19,9 +20,10 @@ async fn main() -> std::io::Result<()> {
     // this way we can have a pool of connections
     // sqlx would not allow possible async concurential approach at compile time with PgConnect since you need the connection
     // to be &mut
-    let connection_pool = PgPool::connect(&configuration.database.connection_string())
-        .await
-        .expect("Failure to connect to DB");
+    let connection_pool =
+        PgPool::connect(&configuration.database.connection_string().expose_secret())
+            .await
+            .expect("Failure to connect to DB");
     // here we build the address that our app will serve
     // We have removed the hard-coded `8000` - it's now coming from our settings!
     let address = format!("127.0.0.1:{}", configuration.application_port);
