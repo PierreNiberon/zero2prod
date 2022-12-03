@@ -1,7 +1,6 @@
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use sqlx::PgPool;
-use tracing::Instrument;
 use uuid::Uuid;
 
 // to test on PS : Invoke-WebRequest http://127.0.0.1:8000/subscriptions -Method POST -Body "email=john_doe%40outlook.fr&name=John"
