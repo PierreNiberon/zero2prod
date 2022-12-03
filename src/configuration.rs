@@ -1,4 +1,3 @@
-extern crate secrecy;
 use secrecy::ExposeSecret;
 use secrecy::Secret;
 
