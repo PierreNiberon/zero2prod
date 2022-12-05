@@ -21,12 +21,14 @@ async fn main() -> std::io::Result<()> {
     // sqlx would not allow possible async concurential approach at compile time with PgConnect since you need the connection
     // to be &mut
     let connection_pool =
-        PgPool::connect(configuration.database.connection_string().expose_secret())
-            .await
+        PgPool::connect_lazy(configuration.database.connection_string().expose_secret())
             .expect("Failure to connect to DB");
     // here we build the address that our app will serve
     // We have removed the hard-coded `8000` - it's now coming from our settings!
-    let address = format!("127.0.0.1:{}", configuration.application_port);
+    let address = format!(
+        "{}:{}",
+        configuration.application.host, configuration.application.port
+    );
     // we connect a socket and listen to the port
     let listener = TcpListener::bind(address)?;
     //we run the app from the run function comming from the startup module
