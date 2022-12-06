@@ -1,20 +1,26 @@
-# command to build the image
-# docker build --tag zero2prod --file Dockerfile .
-# We use the latest Rust stable release as base image
-FROM rust:1.65.0-buster
-# Let's switch our working directory to `app` (equivalent to `cd app`)
-# The `app` folder will be created for us by Docker in case it does not
-# exist already.
+# Builder stage
+FROM rust:1.63.0 AS builder
 WORKDIR /app
-# Install the required system dependencies for our linking configuration
 RUN apt update && apt install lld clang -y
-# Copy all files from our working environment to our Docker image
 COPY . .
-#Set the sqlx offline mode to use the sqlx-data.json
 ENV SQLX_OFFLINE true
-# Let's build our binary!
-# We'll use the release profile to make it faaaast
-# we also remove the src files that are not needed anymore.
-RUN cargo build --release & rm src/*.rs
-# When `docker run` is executed, launch the binary!
-ENTRYPOINT ["./target/release/zero2prod"]
+RUN cargo build --release
+
+# Runtime stage
+FROM debian:bullseye-slim AS runtime
+WORKDIR /app
+# Install OpenSSL - it is dynamically linked by some of our dependencies
+# Install ca-certificates - it is needed to verify TLS certificates
+# when establishing HTTPS connections
+RUN apt-get update -y \
+&& apt-get install -y --no-install-recommends openssl ca-certificates \
+# Clean up
+&& apt-get autoremove -y \
+&& apt-get clean -y \
+&& rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/zero2prod zero2prod
+COPY configuration configuration
+ENV APP_ENVIRONMENT production
+ENTRYPOINT ["./zero2prod"]
+
+

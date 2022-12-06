@@ -20,9 +20,11 @@ async fn main() -> std::io::Result<()> {
     // this way we can have a pool of connections
     // sqlx would not allow possible async concurential approach at compile time with PgConnect since you need the connection
     // to be &mut
-    let connection_pool =
-        PgPool::connect_lazy(configuration.database.connection_string().expose_secret())
-            .expect("Failure to connect to DB");
+    let connection_pool = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(2))
+        .connect_lazy(&configuration.database.connection_string().expose_secret())
+        .expect("Failed to create Postgres connection pool.");
+
     // here we build the address that our app will serve
     // We have removed the hard-coded `8000` - it's now coming from our settings!
     let address = format!(

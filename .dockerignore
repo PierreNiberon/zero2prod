@@ -1,2 +1,7 @@
-# comment
-*/target*
+# files and repertories to ignore
+.env
+target/
+tests/
+Dockerfile
+scripts/
+migrations/
