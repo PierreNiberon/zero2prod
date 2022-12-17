@@ -41,7 +41,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
             configuration_directory.join("base.yaml"),
         ))
         .add_source(config::File::from(
-            configuration_directory.join(&environment_filename),
+            configuration_directory.join(environment_filename),
         ))
         .build()?;
     // Try to convert the configuration values it read into
